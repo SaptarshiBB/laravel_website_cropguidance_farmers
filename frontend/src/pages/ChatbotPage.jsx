@@ -1,0 +1,14 @@
+﻿import { useState } from 'react'
+import { Paperclip, Send } from 'lucide-react'
+import Layout from '../components/layout/Layout'
+import Button from '../components/ui/Button'
+import ChatMessage from '../components/chat/ChatMessage'
+import { sendMessage } from '../api/chatbotApi'
+
+export default function ChatbotPage() {
+  const [messages,setMessages]=useState([{sender:'bot',text:'Namaste. Ask me about crops, pests, weather, fertilizers, schemes, irrigation, harvest timing, market prices, or soil health.',time:new Date().toLocaleTimeString()}])
+  const [text,setText]=useState(''), [typing,setTyping]=useState(false)
+  const ask=async value=>{const msg=value||text;if(!msg.trim())return;setText('');setMessages(m=>[...m,{sender:'user',text:msg,time:new Date().toLocaleTimeString()}]);setTyping(true);try{const res=await sendMessage(msg);setMessages(m=>[...m,{sender:'bot',text:res.reply,time:new Date().toLocaleTimeString()}])}catch{setMessages(m=>[...m,{sender:'bot',text:'Use soil, season, rainfall, and local pest symptoms to narrow the decision. Share more field details for precise guidance.',time:new Date().toLocaleTimeString()}])}finally{setTyping(false)}}
+  const chips=['Best crop for loamy soil?','Weather alert near me','PM-KISAN eligibility','Paddy pest treatment']
+  return <Layout><div className="grid h-[calc(100vh-120px)] gap-4 lg:grid-cols-[280px_1fr]"><aside className="rounded-2xl bg-white p-4 shadow-sm dark:bg-slate-900"><Button className="w-full">New Chat</Button><h3 className="mt-5 font-bold">Suggested Topics</h3>{['Crop Selection','Weather','Pests','Fertilizers','Schemes'].map(t=><button key={t} onClick={()=>ask(t)} className="mt-2 block w-full rounded-lg bg-slate-50 px-3 py-2 text-left text-sm font-semibold dark:bg-slate-800">{t}</button>)}</aside><section className="flex min-h-0 flex-col rounded-2xl bg-slate-100 dark:bg-slate-900"><div className="flex-1 space-y-4 overflow-y-auto p-4">{messages.map((m,i)=><ChatMessage key={i} message={m}/>)}{typing && <div className="rounded-2xl bg-white px-4 py-3 text-sm dark:bg-slate-800">Typing...</div>}</div><div className="border-t border-slate-200 p-4 dark:border-slate-800"><div className="mb-3 flex flex-wrap gap-2">{chips.map(c=><button key={c} onClick={()=>ask(c)} className="rounded-full bg-white px-3 py-1 text-xs font-semibold shadow-sm dark:bg-slate-800">{c}</button>)}</div><div className="flex gap-2"><button className="rounded-lg bg-white p-3 dark:bg-slate-800"><Paperclip size={18}/></button><input className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none dark:border-slate-700 dark:bg-slate-800" value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&ask()} placeholder="Ask your farming question"/><Button onClick={()=>ask()}><Send size={18}/></Button></div></div></section></div></Layout>
+}

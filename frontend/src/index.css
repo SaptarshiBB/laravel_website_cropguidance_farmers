@@ -1,0 +1,11 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Inter, sans-serif; background: #f8fafc; color: #1e293b; }
+.dark body { background: #0f172a; color: #f8fafc; }
+.input-range { accent-color: #16a34a; }
+.shimmer { background: linear-gradient(90deg, rgba(148,163,184,.12) 25%, rgba(148,163,184,.28) 37%, rgba(148,163,184,.12) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }

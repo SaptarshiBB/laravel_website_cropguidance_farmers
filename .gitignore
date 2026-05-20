@@ -1,0 +1,30 @@
+# Ignore OS-specific files
+Thumbs.db
+db.ini
+Desktop.ini
+.DS_Store
+
+# Ignore editor-specific files
+.vscode/
+.idea/
+
+# Ignore backend dependencies and environment files
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/vendor/
+backend/node_modules/
+backend/public/storage
+backend/public/build
+backend/public/hot
+backend/storage/*.key
+backend/.phpunit.cache
+backend/.phpunit.result.cache
+
+# Ignore frontend dependencies and environment files
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.env
+frontend/.env.local
+frontend/*.local

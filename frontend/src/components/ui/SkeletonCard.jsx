@@ -1,0 +1,1 @@
+﻿export default function SkeletonCard({ rows = 4 }) { return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="shimmer mb-4 h-32 rounded-xl" />{Array.from({ length: rows }).map((_, i) => <div key={i} className="shimmer mb-2 h-4 rounded" style={{ width: `${95 - i * 14}%` }} />)}</div> }
