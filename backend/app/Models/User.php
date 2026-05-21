@@ -28,4 +28,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(WeatherLog::class);
     }
+
+    public function authLogs()
+    {
+        return $this->hasMany(AuthLog::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 }

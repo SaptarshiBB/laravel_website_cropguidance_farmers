@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Crop;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CropController extends Controller
 {
     public function index()
     {
-        return response()->json(Crop::with('pestAlerts')->latest()->get());
+        $crops = Cache::remember('all_crops', 3600, fn () => Crop::with('pestAlerts')->latest()->get());
+
+        return response()->json($crops);
     }
 
     public function show($id)
@@ -21,6 +24,7 @@ class CropController extends Controller
     public function store(Request $request)
     {
         $crop = Crop::create($this->validated($request));
+        Cache::forget('all_crops');
         return response()->json($crop, 201);
     }
 
@@ -28,12 +32,14 @@ class CropController extends Controller
     {
         $crop = Crop::findOrFail($id);
         $crop->update($this->validated($request));
+        Cache::forget('all_crops');
         return response()->json($crop);
     }
 
     public function destroy($id)
     {
         Crop::findOrFail($id)->delete();
+        Cache::forget('all_crops');
         return response()->json(['message' => 'Crop deleted successfully.']);
     }
 

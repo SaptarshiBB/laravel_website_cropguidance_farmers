@@ -10,14 +10,21 @@ return new class extends Migration
     {
         Schema::create('pest_alerts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('crop_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('crop_id')->nullable()->constrained()->nullOnDelete();
             $table->string('pest_name');
-            $table->enum('severity', ['low', 'medium', 'high', 'critical']);
+            $table->string('common_name')->nullable();
+            $table->json('affected_crops');
             $table->json('affected_states');
-            $table->text('symptoms');
-            $table->text('prevention');
+            $table->string('season');
+            $table->enum('severity', ['low', 'medium', 'high', 'critical']);
+            $table->json('symptoms');
+            $table->json('prevention_organic');
+            $table->json('prevention_chemical');
             $table->text('emergency_action');
+            $table->unsignedTinyInteger('risk_score')->default(0);
             $table->boolean('is_active')->default(true);
+            $table->date('reported_date')->nullable();
+            $table->string('source')->nullable();
             $table->timestamps();
         });
     }

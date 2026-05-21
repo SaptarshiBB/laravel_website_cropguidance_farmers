@@ -8,31 +8,45 @@ use App\Models\PestAlert;
 use App\Models\Recommendation;
 use App\Models\Scheme;
 use App\Models\User;
+use App\Services\CropRecommendationService;
 use App\Services\WeatherService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __construct(private WeatherService $weather) {}
+    public function __construct(private WeatherService $weather, private CropRecommendationService $recommendations) {}
 
     public function getFarmerSummary(Request $request)
     {
         $user = $request->user();
-        $forecast = $this->weather->forecast($user->district ?: 'Pune', $user->state ?: 'Maharashtra');
-        $alerts = PestAlert::with('crop')->where('is_active', true)->latest()->take(4)->get();
-        $crops = Crop::latest()->take(3)->get();
+        $weather = $this->weather->getWeatherByCity($user->district ?: ($user->state ?: 'Delhi'), $user->state ?: '');
+        $alerts = PestAlert::with('crop')
+            ->where('is_active', true)
+            ->when($user->state, fn ($query) => $query->whereJsonContains('affected_states', $user->state))
+            ->orderBy('risk_score', 'desc')
+            ->take(4)
+            ->get();
+        $recommended = $this->recommendations->getRecommendations([
+            'state' => $user->state ?: 'Punjab',
+            'soil_type' => 'Loamy',
+            'season' => 'kharif',
+            'temperature' => $weather['temperature'],
+            'rainfall' => 800,
+            'water_availability' => 'medium',
+            'budget' => 'medium',
+        ]);
         $schemes = Scheme::where('is_active', true)->latest()->take(2)->get();
 
         return response()->json([
-            'weather' => $forecast['current'],
-            'weekly_rainfall' => collect($forecast['daily'])->map(fn ($d) => ['day' => $d['day'], 'rainfall' => $d['rainfall']])->all(),
-            'temperature_trend' => collect($forecast['daily'])->map(fn ($d) => ['day' => $d['day'], 'temperature' => $d['high']])->all(),
-            'yield_prediction' => [['month' => 'Jun', 'yield' => 18], ['month' => 'Jul', 'yield' => 24], ['month' => 'Aug', 'yield' => 32], ['month' => 'Sep', 'yield' => 38], ['month' => 'Oct', 'yield' => 44]],
+            'weather' => $weather,
+            'weekly_rainfall' => collect($weather['forecast'])->map(fn ($day) => ['day' => $day['day_name'], 'rainfall' => $day['rain_chance']])->all(),
+            'temperature_trend' => collect($weather['forecast'])->map(fn ($day) => ['day' => $day['day_name'], 'temperature' => $day['high']])->all(),
+            'yield_prediction' => collect($recommended)->map(fn ($item) => ['month' => $item['crop']->name, 'yield' => $item['suitability_percent']])->all(),
             'alerts' => $alerts,
-            'recommended_crops' => $crops,
+            'recommended_crops' => $recommended,
             'schemes' => $schemes,
-            'tips' => ['Scout fields every 3-4 days after rain.', 'Use mulching to reduce evaporation.', 'Keep fertilizer away from direct seed contact.'],
-            'irrigation' => 'Irrigate in the early morning only if topsoil is dry below 5 cm.',
+            'tips' => [$weather['farming_advice'], 'Scout fields every 3-4 days after rain.', 'Use soil-test based fertilizer doses.'],
+            'irrigation' => $weather['farming_advice'],
         ]);
     }
 

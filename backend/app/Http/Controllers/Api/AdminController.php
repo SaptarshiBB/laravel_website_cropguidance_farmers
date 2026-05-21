@@ -3,47 +3,119 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuthLog;
 use App\Models\Crop;
 use App\Models\PestAlert;
 use App\Models\Recommendation;
-use App\Models\Scheme;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
-    public function getUsers()
-    {
-        return response()->json(User::latest()->get());
-    }
-
-    public function updateUser(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string'], 'email' => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
-            'role' => ['sometimes', 'in:farmer,admin'], 'state' => ['nullable', 'string'], 'district' => ['nullable', 'string'], 'phone' => ['nullable', 'string'],
-        ]);
-        $user->update($validated);
-        return response()->json($user);
-    }
-
-    public function deleteUser($id)
-    {
-        User::findOrFail($id)->delete();
-        return response()->json(['message' => 'User deleted successfully.']);
-    }
-
-    public function getAnalytics()
+    public function stats()
     {
         return response()->json([
-            'totals' => ['users' => User::count(), 'alerts' => PestAlert::count(), 'crops' => Crop::count(), 'schemes' => Scheme::count()],
-            'registrations' => [['month' => 'Jan', 'users' => 80], ['month' => 'Feb', 'users' => 130], ['month' => 'Mar', 'users' => 210], ['month' => 'Apr', 'users' => 310], ['month' => 'May', 'users' => 460]],
-            'searched_crops' => [['name' => 'Rice', 'value' => 340], ['name' => 'Wheat', 'value' => 290], ['name' => 'Cotton', 'value' => 210], ['name' => 'Maize', 'value' => 180]],
-            'active_states' => [['state' => 'Maharashtra', 'users' => 180], ['state' => 'Punjab', 'users' => 155], ['state' => 'West Bengal', 'users' => 132], ['state' => 'Tamil Nadu', 'users' => 118]],
-            'alert_response' => [['severity' => 'critical', 'rate' => 86], ['severity' => 'high', 'rate' => 78], ['severity' => 'medium', 'rate' => 65], ['severity' => 'low', 'rate' => 52]],
-            'recent_activity' => Recommendation::with('user')->latest()->take(10)->get(),
+            'total_users' => User::count(),
+            'total_farmers' => User::where('role', 'farmer')->count(),
+            'total_admins' => User::where('role', 'admin')->count(),
+            'total_crops' => Crop::count(),
+            'total_pest_alerts' => PestAlert::count(),
+            'total_recommendations' => Recommendation::count(),
+            'recent_logins' => AuthLog::with('user:id,name,email')
+                ->where('action', 'login')
+                ->latest()
+                ->take(10)
+                ->get()
+                ->map(fn (AuthLog $log) => [
+                    'name' => $log->user?->name,
+                    'email' => $log->user?->email,
+                    'created_at' => $log->created_at,
+                ]),
         ]);
+    }
+
+    public function users()
+    {
+        return response()->json(User::select('id', 'name', 'email', 'role', 'state', 'created_at')
+            ->selectSub(
+                AuthLog::select('created_at')
+                    ->whereColumn('user_id', 'users.id')
+                    ->where('action', 'login')
+                    ->latest()
+                    ->limit(1),
+                'last_login'
+            )
+            ->latest()
+            ->paginate(20)
+            ->through(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'state' => $user->state,
+                'created_at' => $user->created_at,
+                'last_login' => $user->last_login,
+            ]));
+    }
+
+    public function promote(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'email' => ['nullable', 'email'],
+        ]);
+
+        $user = !empty($validated['user_id'])
+            ? User::find($validated['user_id'])
+            : User::where('email', $validated['email'] ?? '')->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if ($user->role === 'admin') {
+            return response()->json(['message' => 'User is already an admin.'], 422);
+        }
+
+        $user->role = 'admin';
+        $user->save();
+
+        return response()->json([
+            'message' => 'User promoted to admin successfully',
+            'user' => $user->only(['id', 'name', 'email', 'role']),
+        ]);
+    }
+
+    public function demote(Request $request)
+    {
+        $validated = $request->validate(['user_id' => ['required', 'integer', 'exists:users,id']]);
+
+        if ((int) $validated['user_id'] === (int) Auth::id()) {
+            return response()->json(['message' => 'You cannot demote yourself.'], 422);
+        }
+
+        $user = User::findOrFail($validated['user_id']);
+        $user->role = 'farmer';
+        $user->save();
+
+        return response()->json([
+            'message' => 'User removed from admin successfully',
+            'user' => $user->only(['id', 'name', 'email', 'role']),
+        ]);
+    }
+
+    public function activityLogs()
+    {
+        return response()->json(AuthLog::with('user:id,name,email')
+            ->latest()
+            ->paginate(20)
+            ->through(fn (AuthLog $log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'ip_address' => $log->ip_address,
+                'created_at' => $log->created_at,
+                'user' => $log->user ? $log->user->only(['id', 'name', 'email']) : null,
+            ]));
     }
 }

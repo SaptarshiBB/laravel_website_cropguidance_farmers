@@ -1,5 +1,7 @@
 <?php
 
+// Run: php artisan config:cache && php artisan route:cache && php artisan view:cache for production
+
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatbotController;
@@ -19,6 +21,15 @@ Route::get('/crops', [CropController::class, 'index']);
 Route::get('/crops/{id}', [CropController::class, 'show']);
 Route::get('/pest-alerts', [PestAlertController::class, 'index']);
 Route::get('/pest-alerts/state', [PestAlertController::class, 'getByState']);
+Route::post('/pest-alerts/report', [PestAlertController::class, 'report']);
+
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/stats', [AdminController::class, 'stats']);
+    Route::get('/users', [AdminController::class, 'users']);
+    Route::post('/promote', [AdminController::class, 'promote']);
+    Route::post('/demote', [AdminController::class, 'demote']);
+    Route::get('/activity-logs', [AdminController::class, 'activityLogs']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -32,16 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chatbot/message', [ChatbotController::class, 'sendMessage']);
 
     Route::middleware('admin')->group(function () {
-        Route::get('/admin/users', [AdminController::class, 'getUsers']);
-        Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
-        Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
         Route::post('/crops', [CropController::class, 'store']);
         Route::put('/crops/{id}', [CropController::class, 'update']);
         Route::delete('/crops/{id}', [CropController::class, 'destroy']);
         Route::post('/pest-alerts', [PestAlertController::class, 'store']);
         Route::put('/pest-alerts/{id}', [PestAlertController::class, 'update']);
         Route::post('/schemes', [SchemeController::class, 'store']);
-        Route::get('/admin/analytics', [AdminController::class, 'getAnalytics']);
         Route::get('/dashboard/admin', [DashboardController::class, 'getAdminAnalytics']);
     });
 });

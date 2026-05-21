@@ -1,8 +1,14 @@
-﻿import api from './axios'
-export const getUsers = async () => (await api.get('/admin/users')).data
-export const updateUser = async (id, data) => (await api.put(`/admin/users/${id}`, data)).data
-export const deleteUser = async id => (await api.delete(`/admin/users/${id}`)).data
-export const getAnalytics = async () => (await api.get('/admin/analytics')).data
+import api from './axios'
+
+export const getAdminStats = async () => (await api.get('/admin/stats')).data
+export const getAdminUsers = async () => {
+  const data = (await api.get('/admin/users')).data
+  return data.data || data
+}
+export const promoteUser = async data => (await api.post('/admin/promote', data)).data
+export const demoteUser = async data => (await api.post('/admin/demote', data)).data
+export const getActivityLogs = async page => (await api.get(`/admin/activity-logs?page=${page}`)).data
+
 export const createCrop = async data => (await api.post('/crops', data)).data
 export const updateCrop = async (id, data) => (await api.put(`/crops/${id}`, data)).data
 export const deleteCrop = async id => (await api.delete(`/crops/${id}`)).data

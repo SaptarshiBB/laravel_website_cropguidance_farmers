@@ -11,15 +11,23 @@ return new class extends Migration
         Schema::create('crops', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->json('local_names');
             $table->enum('season', ['kharif', 'rabi', 'zaid']);
-            $table->json('soil_types');
+            $table->json('suitable_states');
+            $table->json('suitable_soils');
             $table->decimal('min_temp', 5, 2);
             $table->decimal('max_temp', 5, 2);
             $table->decimal('min_rainfall', 8, 2);
             $table->decimal('max_rainfall', 8, 2);
-            $table->text('fertilizer_recommendation');
-            $table->string('yield_per_acre');
+            $table->enum('water_requirement', ['low', 'medium', 'high']);
+            $table->json('fertilizer_npk');
+            $table->string('organic_fertilizer');
+            $table->json('yield_per_acre');
+            $table->unsignedSmallInteger('duration_days');
+            $table->json('sowing_months');
+            $table->json('harvest_months');
             $table->text('description');
+            $table->json('precautions');
             $table->string('image_url')->nullable();
             $table->timestamps();
         });
